@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 
 from app.database import drop_all, engine, ensure_db_and_tables
 from app.models.listing import Listing
+from app.models.listing_status import ListingStatus
 from app.models.user import User
 from app.utilities.security import encrypt_password
 
@@ -87,11 +88,7 @@ def seed(*, reset: bool = False) -> None:
                     contact_phone="555-0100",
                     contact_email="landlord@example.com",
                     photos="photo1.jpg",
-                    status="active",
-                    flag_pending=0,
-                    flag_verified=1,
-                    flag_active=1,
-                    flag_rejected=0,
+                    status=ListingStatus.ACTIVE,
                     created_at="2099-01-01T10:00:00+00:00",
                 ),
                 Listing(
@@ -103,11 +100,7 @@ def seed(*, reset: bool = False) -> None:
                     contact_phone="555-0101",
                     contact_email="landlord@example.com",
                     photos="",
-                    status="pending",
-                    flag_pending=1,
-                    flag_verified=0,
-                    flag_active=0,
-                    flag_rejected=0,
+                    status=ListingStatus.PENDING,
                     created_at="2099-01-02T10:00:00+00:00",
                 ),
             ]
