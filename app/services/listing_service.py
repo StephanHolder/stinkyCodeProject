@@ -15,6 +15,12 @@ def _now() -> str:
 def _error(message: str) -> dict[str, Any]:
     return {"ok": False, "error": message}
 
+def _parse_amenities(raw: str) -> list[str]:
+    return [a.strip().lower() for a in (raw or "").split(",") if a.strip()]
+
+ALLOWED_AREAS = {"st_augustine", "mount_hope"}
+CONTACT_FIELDS = {"contact_phone", "contact_email"}
+
 class ListingService:
     def __init__(self, listing_repo: ListingRepository):
         self.listing_repo = listing_repo
@@ -22,8 +28,14 @@ class ListingService:
     def submit(self, landlord: dict | None, **fields: Any) -> dict[str, Any]:
         if not landlord or landlord["role"] != "landlord":
             return _error("landlords only")
+        if fields["area"] not in ALLOWED_AREAS:
+            return _error("area must be st_augustine or mount_hope")
         if fields["price"] <= 0:
             return _error("price must be positive")
+        amenities = _parse_amenities(fields["amenitites"])
+        if not amenities:
+            return _error("at least one amenity is requireed")
+        fields["amenities"] = ",".join(amenities)
         listing = Listing(
             landlord_id=landlord["id"],
             status=ListingStatus.PENDING,
