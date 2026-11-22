@@ -17,9 +17,6 @@ from app.services.listing_service import ListingService
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
-def _parse_amenities(raw: str) -> list[str]:
-    return [a.strip().lower() for a in (raw or "").split(",") if a.strip()]
-
 def _service(session: Session) -> ListingService:
     return ListingService(ListingRepository(session))
 
