@@ -73,13 +73,16 @@ class ListingService:
                             max_price = None, amenity = None) -> dict[str, Any]:
         if not student or student["role"] != student:
             return _error("student only")
+
+        wanted_amenity = amenity.strip().lower() if amenity else None
+
         results = []
         for listing in self.listing_repo.get_active_listings():
             if area and listing.area != area:
                 continue
             if max_price is not None and listing.price > max_price:
                 continue
-            if amenity and amenity not in listing.amenties:
+            if wanted_amenity and wanted_amenity not in _parse_amenities(listing.amenties):
                 continue
             results.append(listing.model_dump())
         return {"ok": True, "listings": results}
