@@ -18,6 +18,28 @@ def _error(message: str) -> dict[str, Any]:
 def _parse_amenities(raw: str) -> list[str]:
     return [a.strip().lower() for a in (raw or "").split(",") if a.strip()]
 
+def _is_provisional_student(user: dict | None) -> bool:
+    return (
+        bool(user)
+        and user["role"] == "student" 
+        and bool(user.get("provisional"))
+    ) 
+
+def _is_registerd_student(user: dict | None) -> bool:
+    return (
+        bool(user)
+        and user["role"] == "student"
+        and bool(user.get("student_id"))
+        and not user.get("provisional")
+    )
+
+def _is_eligible_student(user: dict | None) -> bool:
+    return (
+        _is_registerd_student(user)
+        or
+        _is_provisional_student(user)
+    )
+
 ALLOWED_AREAS = {"st_augustine", "mount_hope"}
 CONTACT_FIELDS = {"contact_phone", "contact_email"}
 
@@ -74,6 +96,7 @@ class ListingService:
         if not student or student["role"] != student:
             return _error("student only")
 
+        show_contact = _is_registerd_student(student)
         wanted_amenity = amenity.strip().lower() if amenity else None
 
         results = []
@@ -84,7 +107,11 @@ class ListingService:
                 continue
             if wanted_amenity and wanted_amenity not in _parse_amenities(listing.amenties):
                 continue
-            results.append(listing.model_dump())
+            item = listing.model_dump()
+            if not show_contact:
+                for field in CONTACT_FIELDS:
+                    item.pop(field, None)
+            results.append(item)
         return {"ok": True, "listings": results}
 
     def list_all(self, status: str | None = None) -> list[dict[str, Any]]:
