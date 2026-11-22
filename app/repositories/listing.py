@@ -2,6 +2,9 @@ from typing import Optional
 from sqlmodel import Session, select
 from app.models.listing import Listing, ListingStatus
 
+import logging
+logger = logging.getLogger(__name__)
+
 class ListingRepository:
     def __init__(self, db: Session):
         self.db = db
@@ -9,18 +12,27 @@ class ListingRepository:
     def get_by_id(self, listing_id: int) -> Optional[Listing]:
         return self.db.get(Listing, listing_id)
 
-    def make_listing(self, listing: Listing) -> Listing:
-        self.db.add(listing)
-        self.db.commit()
-        self.db.refresh(listing)
-        return listing
+    def save_listing(self, listing: Listing) -> Listing:
+        try:
+            self.db.add(listing)
+            self.db.commit()
+            self.db.refresh(listing)
+            return listing
+        except Exception as e:
+            logger.error(f"An error occurred while saving listing: {e}")
+            self.db.rollback()
+            raise
 
-    def get_active_listings(self, limit: int = 100, offset: int = 0) -> list[Listing]:
+    def get_active_listings(self) -> list[Listing]:
         statement = (
             select(Listing)
             .where(Listing.status == ListingStatus.ACTIVE)
-            .offset(offset)
-            .limit(limit)
+            .order_by(Listing.id)
         )
-        results = self.db.exec(statement).all()
-        return results
+        return list(self.db.exec(statement).all())
+
+    def list_all(self, status: Optional[ListingStatus] = None) -> list[ListingStatus]:
+        statment = select(Listing).order_by(Listing.id)
+        if status is not None:
+            statement = statment.where(Listing.status == status)
+        return list(self.db.exec(statement).all())
