@@ -2,20 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from sqlmodel import Session
 
 from app.database import engine
-from app.models.listing import Listing
-from app.models.message import Message
 from app.repositories.listing import ListingRepository
 from app.services.housing_auth import get_user
 from app.services.listing_service import ListingService
 
-def _now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+from app.repositories.message import MessageRepository
+from app.services.message_service import MessageService
 
 def _service(session: Session) -> ListingService:
     return ListingService(ListingRepository(session))
@@ -67,23 +64,6 @@ def list_all(*, status: str | None = None) -> list[dict[str, Any]]:
         return _service(session).list_all(status)
 
 def send_message(student_id: int, listing_id: int, body: str) -> dict[str, Any]:
-    student = get_user(student_id)
-    if not student or student["role"] != "student":
-        return {"ok": False, "error": "students only"}
-    if not body.strip():
-        return {"ok": False, "error": "body required"}
     with Session(engine) as session:
-        listing = session.get(Listing, listing_id)
-        if listing is None:
-            return {"ok": False, "error": "listing not found"}
-        # DEFECT: can message pending/rejected listings
-        message = Message(
-            listing_id=listing_id,
-            student_id=student_id,
-            body=body,
-            created_at=_now(),
-        )
-        session.add(message)
-        session.commit()
-        session.refresh(message)
-        return {"ok": True, "message_id": message.id}
+        service = MessageService(ListingRepository(session), MessageRepository(session))
+        return service.send(get_user(student_id), listing_id, body)

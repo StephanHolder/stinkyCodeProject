@@ -65,3 +65,6 @@ class ListingState:
     # Visibility
     def is_visible_to_students(self) -> bool:
         return False
+
+    def accepts_messages(self) -> bool:
+        return self.is_visible_to_students()
