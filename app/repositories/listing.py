@@ -32,7 +32,7 @@ class ListingRepository:
         return list(self.db.exec(statement).all())
 
     def list_all(self, status: Optional[ListingStatus] = None) -> list[ListingStatus]:
-        statment = select(Listing).order_by(Listing.id)
+        statement = select(Listing).order_by(Listing.id)
         if status is not None:
-            statement = statment.where(Listing.status == status)
+            statement = statement.where(Listing.status == status)
         return list(self.db.exec(statement).all())

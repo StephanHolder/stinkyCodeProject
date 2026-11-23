@@ -54,7 +54,7 @@ class ListingService:
             return _error("area must be st_augustine or mount_hope")
         if fields["price"] <= 0:
             return _error("price must be positive")
-        amenities = _parse_amenities(fields["amenitites"])
+        amenities = _parse_amenities(fields["amenities"])
         if not amenities:
             return _error("at least one amenity is requireed")
         fields["amenities"] = ",".join(amenities)
@@ -93,7 +93,7 @@ class ListingService:
 
     def browse_for_students(self, student: dict | None, *, area = None, 
                             max_price = None, amenity = None) -> dict[str, Any]:
-        if not student or student["role"] != student:
+        if not student or student["role"] != "student":
             return _error("student only")
 
         show_contact = _is_registerd_student(student)
@@ -105,7 +105,7 @@ class ListingService:
                 continue
             if max_price is not None and listing.price > max_price:
                 continue
-            if wanted_amenity and wanted_amenity not in _parse_amenities(listing.amenties):
+            if wanted_amenity and wanted_amenity not in _parse_amenities(listing.amenities):
                 continue
             item = listing.model_dump()
             if not show_contact:
@@ -116,6 +116,6 @@ class ListingService:
 
     def list_all(self, status: str | None = None) -> list[dict[str, Any]]:
             wanted = ListingStatus(status) if status else None
-            return [l.model_dump() for l in self.listings.list_all(wanted)]
+            return [l.model_dump() for l in self.listing_repo.list_all(wanted)]
 
 
