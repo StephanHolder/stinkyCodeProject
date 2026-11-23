@@ -9,6 +9,7 @@ from app.repositories.listing import ListingRepository
 from app.services.lifecycle import ACTIONS, ADMIN_ACTIONS, apply_action
 from app.states import InvalidTransition
 
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -96,8 +97,10 @@ class ListingService:
 
     def browse_for_students(self, student: dict | None, *, area = None, 
                             max_price = None, amenity = None) -> dict[str, Any]:
-        if not student or student["role"] != "student":
-            return _error("student only", "forbidden")
+        if not _is_eligible_student(student):
+            return _error(
+                "student ID or provisional incoming access required", "forbidden"
+            )
 
         show_contact = _is_registerd_student(student)
         wanted_amenity = amenity.strip().lower() if amenity else None
@@ -120,4 +123,3 @@ class ListingService:
     def list_all(self, status: str | None = None) -> list[dict[str, Any]]:
             wanted = ListingStatus(status) if status else None
             return [l.model_dump() for l in self.listing_repo.list_all(wanted)]
-
