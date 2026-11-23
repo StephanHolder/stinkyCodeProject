@@ -12,8 +12,11 @@ from app.states import InvalidTransition
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
-def _error(message: str) -> dict[str, Any]:
-    return {"ok": False, "error": message}
+def _error(message: str, code: str | None = None) -> dict[str, Any]:
+    result: dict[str, Any] = {"ok": False, "error": message}
+    if code:
+        result["code"] = code
+    return result
 
 def _parse_amenities(raw: str) -> list[str]:
     return [a.strip().lower() for a in (raw or "").split(",") if a.strip()]
@@ -49,14 +52,14 @@ class ListingService:
 
     def submit(self, landlord: dict | None, **fields: Any) -> dict[str, Any]:
         if not landlord or landlord["role"] != "landlord":
-            return _error("landlords only")
+            return _error("landlords only", "forbidden")
         if fields["area"] not in ALLOWED_AREAS:
             return _error("area must be st_augustine or mount_hope")
         if fields["price"] <= 0:
             return _error("price must be positive")
         amenities = _parse_amenities(fields["amenities"])
         if not amenities:
-            return _error("at least one amenity is requireed")
+            return _error("at least one amenity is required")
         fields["amenities"] = ",".join(amenities)
         listing = Listing(
             landlord_id=landlord["id"],
@@ -69,24 +72,24 @@ class ListingService:
 
     def transition(self, actor: dict | None, listing_id: int, action: str) -> dict[str, Any]:
         if not actor:
-            return _error("unknown user")
+            return _error("unknown user", "unknown_user")
         if action not in ACTIONS:
-            return _error(f"action must be one of {ACTIONS}")
+            return _error(f"action must be one of {ACTIONS}", "invalid_action")
 
         required_role = "admin" if action in ADMIN_ACTIONS else "landlord"
         if actor["role"] != required_role:
-            return _error(f"{required_role} only")
+            return _error(f"{required_role} only", "forbidden")
 
         listing = self.listing_repo.get_by_id(listing_id)
         if listing is None:
-            return _error("listing not found")
+            return _error("listing not found", "listing_not_found")
         if required_role == "landlord" and listing.landlord_id != actor["id"]:
-            return _error("not your listing")
+            return _error("not your listing", "forbidden")
 
         try:
             apply_action(listing, action)
         except InvalidTransition as exc:
-            return _error(str(exc))
+            return _error(str(exc), "invalid_transition")
 
         saved = self.listing_repo.save_listing(listing)
         return {"ok": True, "listing": saved.model_dump()}
@@ -94,7 +97,7 @@ class ListingService:
     def browse_for_students(self, student: dict | None, *, area = None, 
                             max_price = None, amenity = None) -> dict[str, Any]:
         if not student or student["role"] != "student":
-            return _error("student only")
+            return _error("student only", "forbidden")
 
         show_contact = _is_registerd_student(student)
         wanted_amenity = amenity.strip().lower() if amenity else None
@@ -117,5 +120,4 @@ class ListingService:
     def list_all(self, status: str | None = None) -> list[dict[str, Any]]:
             wanted = ListingStatus(status) if status else None
             return [l.model_dump() for l in self.listing_repo.list_all(wanted)]
-
 

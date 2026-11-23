@@ -22,15 +22,15 @@ class MessageService:
 
     def send(self, student: dict | None, listing_id: int, body: str) -> dict[str, Any]:
         if not _is_eligible_student(student):
-            return _error("student ID or provisional incoming access required")
+            return _error("student ID or provisional incoming access required", "forbidden")
         if not body.strip():
             return _error("body required")
 
         listing = self.listing_repo.get_by_id(listing_id)
         if listing is None:
-            return _error("listing not found")
+            return _error("listing not found", "listing_not_found")
         if not state_for(listing).accepts_messages():
-            return _error("messaging is closed for this listing")
+            return _error("messaging is closed for this listing", "messaging_closed")
 
         message = self.message_repo.save(
             Message(listing_id=listing_id, student_id=student["id"],
