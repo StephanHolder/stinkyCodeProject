@@ -9,11 +9,17 @@ from app.repositories.message import MessageRepository
 from app.services.listing_service import _is_eligible_student
 from app.states import state_for
 
+
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
-def _error(message: str) -> dict[str, Any]:
-    return {"ok": False, "error": message}
+
+def _error(message: str, code: str | None = None) -> dict[str, Any]:
+    result: dict[str, Any] = {"ok": False, "error": message}
+    if code:
+        result["code"] = code
+    return result
+
 
 class MessageService:
     def __init__(self, listing_repo: ListingRepository, message_repo: MessageRepository):
