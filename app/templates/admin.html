@@ -6,6 +6,28 @@
 <p>
   Review pending listings and verify or reject them through the API.
 </p>
+<p class="text-secondary">
+  Use <code>X-User-Id</code> with the seeded admin account when calling the API from a client.
+</p>
+{% if pending_listings %}
+<div class="table-responsive">
+  <table class="table">
+    <thead><tr><th>Listing</th><th>Area</th><th>Price</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for listing in pending_listings %}
+      <tr>
+        <td>{{ listing.title }}</td>
+        <td>{{ listing.area }}</td>
+        <td>${{ listing.price }}</td>
+        <td>{{ listing.status }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-secondary">No pending listings require review.</p>
+{% endif %}
 <div class="app-actions">
   <a href="/docs">Open API docs</a>
   <a class="secondary" href="/api/admin/listings">All listings</a>

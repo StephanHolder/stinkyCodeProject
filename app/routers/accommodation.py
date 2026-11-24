@@ -30,7 +30,7 @@ class ListingBody(BaseModel):
 
 class TransitionBody(BaseModel):
     action: str = Field(
-        description="verify | reject | activate | deactivate | resubmit"
+        description="approve | provisionally_accept | reject | force_deactivate | activate | deactivate | resubmit | withdraw"
     )
 
 
@@ -71,6 +71,8 @@ def submit(
         photos=body.photos,
     )
     if not result.get("ok"):
+        if result.get("code") == "forbidden":
+            raise HTTPException(status_code=403, detail=result.get("error"))
         raise HTTPException(status_code=400, detail=result.get("error"))
     return result
 
@@ -83,6 +85,14 @@ def transition(
 ) -> dict[str, Any]:
     result = listings.transition(_actor_id(x_user_id), listing_id, body.action)
     if not result.get("ok"):
+        code = result.get("code")
+        if code == "listing_not_found":
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        if code == "invalid_transition":
+            raise HTTPException(status_code=409, detail=result.get("error"))
+        if code in {"forbidden", "unknown_user"}:
+            status_code = 401 if code == "unknown_user" else 403
+            raise HTTPException(status_code=status_code, detail=result.get("error"))
         raise HTTPException(status_code=400, detail=result.get("error"))
     return result
 
@@ -109,7 +119,10 @@ def admin_list(
     actor = auth.get_user(_actor_id(x_user_id))
     if not actor or actor["role"] != "admin":
         raise HTTPException(status_code=403, detail="admin only")
-    return {"listings": listings.list_all(status=status)}
+    try:
+        return {"listings": listings.list_all(status=status)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/student/messages")
@@ -120,5 +133,11 @@ def message(
         _actor_id(x_user_id), body.listing_id, body.body
     )
     if not result.get("ok"):
+        if result.get("code") == "listing_not_found":
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        if result.get("code") == "forbidden":
+            raise HTTPException(status_code=403, detail=result.get("error"))
+        if result.get("code") == "messaging_closed":
+            raise HTTPException(status_code=409, detail=result.get("error"))
         raise HTTPException(status_code=400, detail=result.get("error"))
     return result
