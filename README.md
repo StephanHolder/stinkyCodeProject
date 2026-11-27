@@ -39,3 +39,34 @@ See [`ASSIGNMENT.md`](ASSIGNMENT.md) and [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.
 ```bash
 python -m pytest tests -q
 ```
+
+## Listing lifecycle (State pattern)
+
+A listing is always in exactly one status. Each status is a class in `app/states/` that allows only its own transitions. Anything else is refused with `409`. `ListingService` checks roles and ownership, then calls the state.
+
+| Status | Allowed actions → new status |
+| --- | --- |
+| pending | approve → approved; provisionally_accept → provisional; reject → rejected; withdraw → withdrawn |
+| provisional | approve → approved; reject → rejected; resubmit → pending; withdraw → withdrawn |
+| approved | activate → active; force_deactivate → force_deactivated; withdraw → withdrawn |
+| rejected | resubmit → pending |
+| active | deactivate → inactive; force_deactivate → force_deactivated; withdraw → withdrawn |
+| inactive | activate → active; withdraw → withdrawn |
+| force_deactivated | resubmit → pending |
+| withdrawn | none (terminal) |
+
+Admins perform approve, provisionally_accept, reject and force_deactivate. The owning landlord performs activate, deactivate, resubmit and withdraw. Only `active` listings are visible to students.
+
+Example (PowerShell): admin approves the seeded pending listing, then its landlord activates it.
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:5000/api/listings/2/transition -Headers @{"X-User-Id"="1"} -ContentType "application/json" -Body '{"action":"approve"}'
+Invoke-RestMethod -Method Post http://127.0.0.1:5000/api/listings/2/transition -Headers @{"X-User-Id"="4"} -ContentType "application/json" -Body '{"action":"activate"}'
+```
+
+## Structure
+
+`app/states/` (State pattern) · `app/services/` (rules and roles) · `app/repositories/` (database access) · `app/routers/` (HTTP) · `tests/`.
+
+## Deploy
+
+`render.yaml` is a Render Blueprint (web service plus Postgres). On start it runs `python manage.py init --no-drop` (creates tables and seeds) and then the app. Health check: `/health`.
