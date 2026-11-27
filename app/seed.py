@@ -107,6 +107,31 @@ def seed(*, reset: bool = False) -> None:
         )
         session.commit()
 
+        extra = [
+            ("Provisionally Accepted Room", "st_augustine", 3000, ListingStatus.PROVISIONAL),
+            ("Approved Studio", "mount_hope", 3200, ListingStatus.APPROVED),
+            ("Rejected Flat", "st_augustine", 2500, ListingStatus.REJECTED),
+            ("Inactive Apartment", "mount_hope", 2900, ListingStatus.INACTIVE),
+            ("Force-Deactivated House", "st_augustine", 4000, ListingStatus.FORCE_DEACTIVATED),
+            ("Withdrawn Room", "mount_hope", 2000, ListingStatus.WITHDRAWN),
+        ]
+        for i, (title, area, price, status) in enumerate(extra, start=3):
+            session.add(
+                Listing(
+                    landlord_id=landlord.id,
+                    title=title,
+                    area=area,
+                    price=price,
+                    amenities="wifi",
+                    contact_phone=f"555-01{i:02d}",
+                    contact_email="landlord@example.com",
+                    photos="",
+                    status=status,
+                    created_at=f"2099-01-{i:02d}T10:00:00+00:00",
+                )
+            )
+        session.commit()
+
 
 if __name__ == "__main__":
     seed(reset=True)
